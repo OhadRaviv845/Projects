@@ -1,0 +1,24 @@
+Ohad Raviv
+204590780
+
+=============================
+=  README for ex4: Sudoku   =
+=============================
+
+
+==================
+=  Description:  =
+==================
+1. function to check if sudoku is complete.
+2. a function to create a list of lists containing a certain square.
+3. a function to check for each square if it has any options to fill.
+4. searching for all squares which only have one valid option to fill.
+5. a function that goes through all squares in the board and tries to find any conflicts.
+6. a function that checks if it's legal to add a certain value to a certain square and adds it.
+7. a function to go through the whole game, filling in values until it is all complete, leading to inconsistencies or
+partially solved.
+
+======================
+=  Special Comments  =
+======================
+1. further documentation is on each function.

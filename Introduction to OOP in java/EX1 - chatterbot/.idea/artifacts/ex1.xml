@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="ex1">
+    <output-path>$PROJECT_DIR$/out/artifacts/ex1</output-path>
+    <root id="archive" name="ex1.jar">
+      <element id="file-copy" path="$PROJECT_DIR$/src/ChatterBot.java" />
+      <element id="file-copy" path="$PROJECT_DIR$/src/README" />
+    </root>
+  </artifact>
+</component>

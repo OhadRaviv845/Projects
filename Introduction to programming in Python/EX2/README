@@ -1,0 +1,20 @@
+Name: Ohad Raviv
+ID: 204590780
+
+==================================
+=  README for ex2: hello turtle  =
+==================================
+
+==================
+=  Description:  =
+==================
+
+1. draw mercedes function - through coding and coordinates, painting a mercedes logo with the turtle graphics library.
+2. draw smiley function - creating a circle, than two more smaller circles as eyes, jumping to a specific coordinate
+and painting a semi circle for a mouth.
+3. draw centipede function - calling for 'draw smiley' for the head, then the function accepts the variable n which
+then determines how many times the loop will run - each time is another link for the centipede.
+4. draw regular polygon - a loop that accepts a variable as it's number of edges for the polygon, the angles
+are calculated as 360/number of edges.
+5. connect all pairs - a loop within a loop that runs to connect al of the coordinates the function receives when it's
+called.

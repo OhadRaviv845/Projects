@@ -1,0 +1,76 @@
+---
+title: "lab1 assignment"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+library(tidyverse)
+library(haven)
+library(Hmisc)
+library(ggplot2)
+waitingtime <- data.frame(
+  time = as.Date('2012-01-01') + 0:9,
+  firstPerson = abs(rnorm(10, 0, 1)),
+  secondPerson = abs(rnorm(10, 2, 6)),
+  thirdPerson = abs(rnorm(10, 4, 2))
+)
+
+waitingtime
+waitingtime_l <- waitingtime %>% gather(person, waiting, -time)
+waitingtime_l
+waitingtime_w <- waitingtime_l %>% spread(person, waiting)
+waitingtime_w
+```
+```{r}
+footballPlayers <- data.frame(
+    surname = c("Ronaldo", "Messi", "Mbape", "Beckham", "Zidane", "Van-nistleroy"),
+    nationality = c("Portugal", "Argentina", "France", "UK", "France", "Netherlands"),
+    retired = c("yes", rep("no", 5)))
+teams <- data.frame(
+    name = c("Ronaldo", "Messi", "Mbape", "Beckham", "Zidane", "Inzaghi"),
+    team = c("Real Madrid",
+              "FC Barca",
+              "PSG",
+              "Man United",
+              "Real Madrid",
+               "AC Milan"),
+    MVP = c(NA, "Yes", NA, NA, NA, NA))
+teams_and_footballPlayers <- merge(teams, footballPlayers, by.x="name", by.y="surname") #inner join
+teams_and_footballPlayers <- merge(teams, footballPlayers, by.x="name", by.y="surname", all.x=TRUE) #left join
+teams_and_footballPlayers
+```
+```{r}
+setwd("/Users/ohad/Documents/לימודים/applied econometrics/lab1")
+chetty <- read_dta("mrc_table1.dta")
+chettyCA <- subset(chetty, state=="CA")
+chettyMA <- subset(chetty, state=="MA")
+chettyAL <- subset(chetty, state=="AL")
+vectorofmeans <- c(mean(chettyCA$par_median), mean(chettyMA$par_median), mean(chettyAL$par_median))
+vectorofmeans
+barplot(vectorofmeans, main = "Average of parent income, CA, MA and AL", xlab="state", names.arg=c("California", "Massachusets", "Alabama"), col=c("blue", "orange", "red"))
+```
+```{r}
+chetty <- as_tibble(chetty)
+chetty <- chetty %>%
+  add_count(state, sort=TRUE, name="count_by_state")
+chetty[,c("czname", "name", "count_by_state")]
+```
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

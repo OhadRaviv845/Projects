@@ -1,0 +1,267 @@
+---
+title: "ps2"
+author: "Ohad Raviv"
+date: "02/05/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+setwd("/Users/ohad/Documents/לימודים/applied econometrics/PS2")
+       
+knitr::opts_chunk$set(warning=FALSE)
+```
+
+```{r}
+library(magrittr)
+library(haven)
+library(Hmisc)
+library(tidyverse)
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+library(stargazer)
+library(plyr)
+library(ri)
+library(scales)
+library(readstata13)
+library(gridExtra)
+library(sandwich)
+library(lmtest)
+```
+1)
+```{r}
+stocks <- read.dta13("data_part1.dta")
+stocks$rf <- 0.0041
+stocks$rM_rf <- stocks$r_M - stocks$rf
+stocks$rA_rf <- stocks$r_A - stocks$rf
+stocks$rB_rf <- stocks$r_B - stocks$rf
+head(stocks)
+```
+
+2)
+```{r}
+sampleVar1 <- cov(stocks[c("r_A", "r_B", "r_M")])
+sampleVar2 <- cov(stocks[c("rA_rf", "rB_rf", "rM_rf")])
+
+sampleVar1
+sampleVar2
+```
+As we can see, both of the sample variences are equal. That's because $r_{f}$ is constant and we know that var(X + c) = var(X)
+
+
+3)
+```{r}
+y.lim <- c(min(stocks$rA_rf,stocks$rB_rf), max(stocks$rA_rf,stocks$rB_rf))
+plot1 <- ggplot(stocks, aes(x=rM_rf, y=rA_rf)) + geom_point() + ylim(y.lim) +ggtitle("SPDR Gold Shares")
+plot2 <- ggplot(stocks, aes(x=rM_rf, y=rB_rf)) + geom_point() + ylim(y.lim) +ggtitle("Morgan Stanely")
+grid.arrange(plot1, plot2, ncol=2) 
+```
+
+As we can learn from the graphs, the excess returns of Morgan Stanley are more strongly associated with the market returns. When the data shows that the market returns are rising - the excess returns of Morgan Stanley also rise. On the other hand, when the marekt returns are rising the SPDR Gold Share returns stay practically the same.
+
+
+
+
+4) a)
+consider the following linear regression - ($r_{jt}$ −$r_{f}$)=$α_{j}$ + $β_{j}$($r_{Mt}$ − $r_{f}$)+ $ε_{jt}$ and we'll prove $β_{j}$ = $\frac{cov( $r_{j}$ , $r_{M}$)}{var( $r_{M}$ )}$
+```{r}
+#define X, Y 
+Y_1 <- stocks$rA_rf
+Y_2 <- stocks$rB_rf
+X <- stocks$rM_rf
+intercept <- rep(1, length(Y_1)) #setting the p=0
+X <- cbind(intercept, X)
+
+r_A <- stocks$r_A
+r_B <- stocks$r_B
+r_M <- stocks$r_M
+
+#projection of X on Y
+coeff1 <- solve(t(X) %*% X) %*% t(X) %*% Y_1
+reg.beta1 <- round(coeff1[2],3)
+cov.r_A <- round(cov(r_A, r_M)/var(r_M),3)
+
+
+coeff2 <- solve(t(X) %*% X) %*% t(X) %*% Y_2
+reg.beta2 <- round(coeff2[2],3)
+cov.r_B <- round(cov(r_B, r_M)/var(r_M),3)
+
+cat(paste0("For beta_A: ",cov.r_A, " = ", reg.beta1))
+```
+```{r}
+cat(paste0("For beta_B: ",cov.r_B, " = ", reg.beta2))
+```
+
+
+b)
+We can see that if E($r_{j}$) = $β_{j}$ (E( $r_{M}$) - $r_{f}$ ) then Y = ($r_{A}$ - $r_{f}$), X = ($r_{M}$ - $r_{f}$ ) and we already know E( $r_{j}$ ) - $r_{f}$ = $β_{j}$(E($r_{M}$) - $r_{f}) -> E(Y) = $β_{j}$ E(X)
+
+($r_{jt}$ - $r_{f}$) = $α_{j}$ + $β_{j}$ ($r_{Mt}$ - $r_{f}$) + $ϵ_{jt}$)
+
+and by the linearity of expectation: E($r_{jt}$) _ $r_{f}$ = E($α_{j}$) + $β_{j}$ (E($r_{Mt}$) - $r{f}$) + E($r_{jt}$)
+$r_{f}$ is constant, E($ϵ_{jt}$) is 0. so if equation 1 holds then we nkow $a_{j}$ is 0.
+
+
+c)
+```{r}
+Y_1 <- stocks$rA_rf
+Y_2 <- stocks$rB_rf
+X <- stocks$rM_rf
+
+r_A <- stocks$r_A
+r_B <- stocks$r_B
+r_M <- stocks$r_M
+
+
+reg.model1 <- lm(Y_1~X)
+reg.beta1 <- round(reg.model1$coefficients[2],3)
+reg.alpha1 <- reg.model1$coefficients[1]
+
+reg.model2 <- lm(Y_2~X)
+reg.beta2 <- round(reg.model2$coefficients[2],3)
+reg.alpha2 <- reg.model2$coefficients[1]
+```
+i. Estimated values are β̂(A)=0.007 , β̂B=1.638
+ii. Yes, it's easy to see that the cov(A,M) is smaller than cov(A,B). Becuase the estimate of beta is done with single linear regression, the main impact on the beta is the covariance of X,Y.
+iii. Based on the estimated βˆA and βˆB, we can say that the Morgan Stanley is more correlated with the market. If we would invest in each option, and the market would rise in 1000$, SPDR will rise by 7 and SPDR will rise by 1683.
+
+iv:
+```{r}
+y.lim <- c(min(stocks$rA_rf,stocks$rB_rf), max(stocks$rA_rf,stocks$rB_rf))
+plot1 <- ggplot(stocks, aes(x=rM_rf, y=rA_rf)) + geom_point()+geom_smooth(method = "lm", se = FALSE) + ylim(y.lim) +ggtitle("SPDR Gold Shares")
+plot2 <- ggplot(stocks, aes(x=rM_rf, y=rB_rf)) + geom_point() +geom_smooth(method = "lm", se = FALSE) + ylim(y.lim) +ggtitle("Morgan Stanely")
+grid.arrange(plot1, plot2, ncol=2)
+```
+v. Since it is less correlated with the market performance, I would recommend to a worried investor to invest her money in SPDR.
+
+Part 2:
+1)
+```{r}
+mutualReturns <- read.dta13("data_part2.dta")
+mutualReturns_length <- length(colnames(mutualReturns))
+
+mutualReturns[2:mutualReturns_length] <- lapply(mutualReturns[2:mutualReturns_length], function(x) x-0.0041)
+```
+
+2)
+```{r}
+SQPX.reg <- lm(r_swppx ~ r_M, data=mutualReturns)
+SQPX.alpha <- SQPX.reg$coefficients[1]
+SQPX.beta <- SQPX.reg$coefficients[2]
+print(paste0("alpha is: ", round(SQPX.alpha,4), " beta is: ",round(SQPX.beta,4)))
+```
+a. Looking at equation 2, we see that the variance of the residuals may vary by each sample. Homescedasticity may be assume only if the variance of the residuals is distinct and therefore we can't assume homoscedasticity.
+
+In the following plot - if the data was homoscedastic we would expect a relatively horizontal line with equally spraed points around it. We can see that this is not the case and hence we have a heteroscedasticity problem.
+```{r}
+plot(SQPX.reg, which=3)
+```
+b. We shall now test the null hypothesis that α = 0 with a 0.1 significance level:
+```{r}
+#vcovHC for heteroscedastic-robust
+SQPX.alpha.hat <- SQPX.alpha
+SQPX.alpha.se <- sqrt(vcovHC(SQPX.reg)[1,1])
+test.stat <- abs(SQPX.alpha.hat/SQPX.alpha.se)
+SQPX.alpha.pval <- 2*(1-pt(test.stat,dim(mutualReturns)[1]-1))
+
+#Will we reject the null hypothesis at 0.1 level?
+test.stat > qt(0.95, dim(mutualReturns)[1]-1)
+```
+```{r}
+SQPX.alpha.pval < 0.1
+```
+We reject the null hypothesis at 0.1 significance level that α = 0.
+
+c.
+```{r}
+SQPX.CI <- coefci(SQPX.reg, stocks = dim(mutualReturns)[1]-1, level=.90, vcov = vcovHC)[1,]
+SQPX.CI 
+```
+
+d. We can conclude that α will be greater than 0, but not by a lot - in 90% chance alpha will be between 5.1940146^{-4} and 0.0030194. It's ok but we can't say that it would outperform the market, investor i will probably invest in this fund.
+
+3)
+```{r}
+Hypo.data <- function(stocks, fund, r_M, a, fund_name) {
+  fund.reg <- lm(fund ~ r_M)
+  fund.alpha.hat <- fund.reg$coefficients[1]
+  fund.beta.hat <- fund.reg$coefficients[2]
+  fund.alpha.se <- sqrt(vcovHC(fund.reg)[1,1])
+  
+  test.stat <- abs(fund.alpha.hat/fund.alpha.se)
+  fund.alpha.pval <- 2*(1-pt(test.stat,dim(stocks)[1]-1))
+  null_status <- test.stat > qt(1-(a/2), dim(stocks)[1]-1)
+  # fund.alpha.pval < a
+  
+  fund.CI <- coefci(fund.reg, df = dim(stocks)[1]-1, level=1-a, vcov = vcovHC)[1,]
+  ans <- data.frame(fund = fund_name, alpha= round(fund.alpha.hat,4), beta= round(fund.beta.hat,4), nullHypo = null_status, pval = round(fund.alpha.pval,4))
+  return(ans)
+}
+```
+
+```{r}
+data <- data.frame(fund = NA, alpha= NA, beta= NA, nullHypo = NA, pval = NA)
+for (col in c(1:10)) {
+  tmpData <- (Hypo.data(mutualReturns,mutualReturns[,col+2], mutualReturns$r_M, 0.1, names(mutualReturns)[3:12][col]))
+  data <- rbind(data, tmpData)
+} 
+rownames(data) <- NULL
+data <- na.omit(data)
+data
+```
+We shall reject three of the funds for the null hypothesis, these are the funds: vbisx, swtsx, swppx.
+Using the CAPM model if α>0 then we would expect the asset to have a higher expected return than the market. So I can say that the alpha will be the best indicator for returns, the bigger the alpha the bigger the returns we will expect.
+The fund which surprises me for making it into the Time's 50 best mutual Funds in 2018 are those with both a negative alpha and a rejection of the null hypotheses - there is only one and it is vbisx.
+
+4)
+a. Because we have 10 hypotheses testing to perform and we check with a significance level of 0.1, if only one null hypothesis would be true, then we would get a proportion of a tenth which equals 0.1.
+
+b. If the two null hypothesis are independent then P(A ∩ B) = P(A)P(B) then we know:
+P(reject any null) = 1 - P(reject no null)
+=P(don't reject H0 and don't reject H0) = 1 - (1 - α)^2 = 0.19 which is greater than 0.1.
+
+It might be exactly equal to 0.1 if the two null hypothesis are fully dependent:
+P(A∩B)=min(P(a),P(b))0.1
+
+c. According to the proof shown in the previous section:
+P(reject any null) = 1 - P(reject no null)
+=P(don;t reject H0 and ... and don't reject H0) = 1 - (1 - α)^n = 1 - (1 - 0.1)^10 = 0.65
+
+It could be equal 0.1 in the same way as explained in b.
+
+5)
+```{r}
+data$bonferon <- data$pval < (0.1/10)
+data
+```
+As we can see from the data, we will reject only one null hypothesis - vbisx fund.
+
+6)
+```{r}
+alpha= 0.1
+data <- arrange(data, pval)
+data$k <- c(1:nrow(data))
+data$RejHypK <- ifelse((alpha/(10+1-data$k))>data$pval, TRUE, FALSE)
+#for k+2 the process ends here.
+data
+```
+We'll recject two null hypothesis (vbisx, swtsx). Yes I was able to reject one more null hypothesis than the boneferonni correction.
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

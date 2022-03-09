@@ -1,0 +1,23 @@
+ohadrav
+204590780
+
+In this README file I will explain the design of the bricker game, used for ex3_2 in the course.
+BrickerGameManager is the class which holds the main of the whole program and this is where the whole game actually
+occurs. It extends from GameManager provided with the code of Danogl, it initiates all the game objects and the game
+itself. The general API implemented is the one given on moodle, here is a chronoligcal explanation for how i chose
+to implement it - The main starts BrickerGameManager which first opens a window for the game (using the constructor).
+Then the method InitializeGame creates all the game objects using all the classes. It first creates the background
+which is a GameObject type. It then creates a ball which is type Ball - using class Ball.java .
+Using the class paddle, the next game object generated is the paddle. Next thing we create are the borders - three
+in a row are created, one for each side and one for the top. then using the method initializeBricks we generate the
+bricks for the game, using type Brcik of the Brick class. Both the NumericLifeCounter and the GraphicLifeCounter
+are displayed at the top left corner underneath the bricks of the game, created so no object will be able to colide
+with them. We achieve this attribute of no colision by setting the counters as false for should_colide_with.
+Then the game runs using the update method - winning condition is that there are no bricks left, losing a life condition
+is if the ball drops, losing the game is when there are no more lives left.
+Documentation for the objects which are also in ex 3_1 is the same, I will now add explanations for the design and
+implementation of classes and functionalities which are added in the second part of the ex. First of all in this part
+the bricks creation changes - whenever a new brick is created, it is initialized through the factory where it can get
+different charectaristics. Aside from the ones that were a requirement for the ex, I chose to add gravity to the ball.
+The factory randomizes different behaviours for the bricks, these behaviours are being initialized when these bricks are
+hit. Further documentation and explanations are added in the classes themselves.

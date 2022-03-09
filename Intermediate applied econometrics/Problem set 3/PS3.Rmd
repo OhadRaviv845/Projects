@@ -1,0 +1,391 @@
+---
+title: "PS3"
+author: "Ohad Raviv"
+date: "04/06/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+       
+knitr::opts_chunk$set(warning=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(sandwich)
+library(lmtest)
+library(car)
+```
+
+Part 1 - Research question and data:
+
+Question 1:
+
+a) The creators of BTB believed that this concept would reduce racial discrimination because there are disproportionate representations for races in criminal record percentages. If an employer chooses who to hire according to weather that person has a criminal record, then many more black men will be disqualified for the job than white men who tend to have a lower criminal record.
+
+***
+b) The two hypotheses the writers put forward in regard to why the plan might backfire are - the first is, that due to lack of personal information about each applicant the employers might discriminate applicants by race. This way, if an employer knows that generally black people have a bigger chance to have a criminal record, he would prefer not to hire them. this would hurt the black race, espacially those who don't have any criminal record and now can't attest to it because of the BTB policy. The second hypotheses for why the plan might backfire is that in the case that the employer can't actually check the data he would just rely on group generalizations or stereotypes.
+
+Question 2:
+
+```{r}
+df <- read.table("AganStarrQJEData.csv", sep = ",", header = TRUE)
+df <- subset(df, remover != -1)
+head(df)
+```
+
+Part 2 - Review the law of iterated expectations:
+1) We wish to calculate: E(X)=P(W)P(response|White)+P(B)P(response|Black) where X=callback rate.
+```{r}
+df$responseW <- ifelse(df$white==1, df$response, NA)
+df$responseB <- ifelse(df$white==0, df$response, NA)
+
+Probres_w <- mean(df$responseW, na.rm = TRUE)
+Probres_b <- mean(df$responseB, na.rm = TRUE)
+
+Prob_w <- mean(df$white, na.rm = TRUE)
+Prob_b <- mean(df$black, na.rm = TRUE)
+
+LIE_res <- Probres_w*Prob_w + Probres_b*Prob_b 
+actual_response_rate <- mean(df$response)
+
+LIE_res
+```
+```{r}
+actual_response_rate
+```
+
+Part 3. Equivalence between Linear Regression with Fully Saturated Model and Conditional Means
+
+Question 1)
+
+Given E(Y|$X_{1}$,$X_{2}$ = $\beta_{1}$$X_{1}$+$\beta_{2}X_{2}$+$\beta_{3}X_{1}X_{2}$) the conditional means for $\beta_{i}$ are:
+
+
+$\beta_{1}$ = E($Y_{i}$ = 1| $X_{2i}$ = 0)
+
+$\beta_{2}$ = E($Y_{i}$| $X_{1i}$=0, $X_{2i}$ = 1)
+
+$\beta_{3}$ = E($Y_{i}$| $X_{1i}$=1, $X_{2i}$ = 1)
+
+Question 2)
+model: $Callback_{i}$ = $\alpha_{0} + \alpha_{1}White_{i} + \epsilon_{i}$
+```{r}
+df_q2 <- subset(df, post==0 & remover==0)
+q2.model <- lm(response ~white,data=df_q2)
+summary(q2.model)
+```
+
+(a)
+The estimated $\alpha_{1}$ is 0.0268539.
+
+The reason $\alpha_{1}$ can be used as a consistent estimator of the effect of race on the callback probabilty without worring about omitted variable bias is because the effect of race is set by a binary variable - if $\alpha_{1}$ is - that means that the person is black.
+
+furthermore, we can see that the variance of $\alpha_{1}$ is small and we have a lot of observations in the data.
+
+(b)
+```{r}
+alpha_0 <- q2.model$coefficients[1]
+mean_black_callback <- mean(na.omit(df_q2$responseB))
+
+round(alpha_0,3) == round(mean_black_callback,3)
+```
+
+(c)
+```{r}
+alpha_1 <- q2.model$coefficients[2]
+mean_callback <- mean(na.omit(df_q2$responseW))
+round(mean_callback,3) == round(alpha_1+alpha_0,3)
+```
+
+Question 3.
+
+Model: $Callback_{i} = \lambda_{0} + \lambda_{1}White_{i} + \lambda_{2}Crime_{i} + \lambda_{3}(White_{i} X Crime_{i}) + \epsilon_{i}$
+
+```{r}
+df_q3 <- subset(df, remover==1 & pre==1)
+q3.model <- lm(response ~white*crime,data=df_q3)
+```
+
+** (a) In question 1 none of the employers had a box in the pre period, so basically nothing should change here except for the of the white people who will get a callback. We can deduce that because these employers didn't have the box in the first place - they probably care less about the criminal record of applicants.
+
+However, in this model we see employers that had the box and will remove it in the post period, so we will need the criminal record to observe the diff that the box would cause in the callback rate.
+
+(b)
+```{r}
+summary(q3.model)
+```
+
+As we can see the estimator for the white variable is smaller here (it was 0.0268539 for the period without the box and now it's only 0.0113492 for this period without the box). The reason is that $\alpha_{1}$ isn't taken into account - the box variable can "identify white people with a criminal record.
+
+We can also see a higher value for $\beta_{0} > \alpha_{0}$. What it means is that the impact of being black without a box, and for $\alpha_{0}$ is only for being black, so we get a smaller call rate for black with a box.
+
+Comparing $\beta_{3} and \beta_{2}$ we notice that the effect of having a criminal record affects much worse on the callback rate for a black persob than for a whie person - for black it's -0.042809 vs - 0.0078346, while for a white it's -0.042809 vs -0.0506436.
+
+We don't need to worry about omitted variable bias when using $\hat{lambda_{1}}$ or when using $\hat{\lambda_{1}}$ + $\hat{\lambda_{3}}$ because there is no other omitted variable that can affect these variables. We know that $\lambda_{1}$ is a binary variable - either black or white, and for $\lambda_{1} +\lambda_{3}$ we also have only two options.
+
+(c)
+```{r}
+lambdas_3c <-  q3.model$coefficients
+lambda_0_hat <- as.numeric(lambdas_3c[1])
+round(mean(subset(df, pre==1 &remover==1 & crime==0 & black==1)$response),4) == round(lambda_0_hat,4)
+```
+
+We got the result that $\hat{\lambda_{0}}$ is equal to the sample mean of callback among black applicants without a criminal record in the pre period for employers without a box. It equalls 0.1269841.
+
+(d)
+Using the model: $Callback_{i}$ = $\lambda_{0}$ + $\lambda_{1}White_{i}$ + $\lambda_{2}Crime_{i}$ + $\lambda_{3}(White X Crime_{i))$ + $\epsilon_{i}$
+
+I would like to show:
+
+$\lambda_{0}$ = E($callback_{cb}$ | White = 0, Crime = 0)
+ 
+$\lambda_{1}$ = E($Callback_{cb}$ | White = 1, Crime = 0) - E ($Callback_{cb}$ | White = 0, Crime = 0)
+
+$\lambda_{2}$ = E($Callback_{cb}$ | White = 0, Crime - 1) - E($Callback_{cb}$ | White = 0, Crime = 0)
+
+$\lambda_{3}$ = E($Callback_{cb}$ | White = 1, Crime = 1) - E($Callback_{cb}$ | White =1, Crime = 0) - E($Callback_{cb}$ | White = 0, Crime = 1) - E($Callback_{cb}$ | White = 0, Crime = 0)
+
+```{r}
+df_q3d <- subset(df, remover==1 &pre==1)
+lambda_0 <-mean(subset(df_q3d, crime==0 & white==0)$response)
+
+lambda_1 <- mean(subset(df_q3d, crime==0 & white==1)$response)-mean(subset(df_q3d, crime==0 & white==0)$response)
+
+lambda_2 <- mean(subset(df_q3d, crime==1 & white==0)$response)-mean(subset(df_q3d, crime==0 & white==0)$response)
+
+lambda_3 <- mean(subset(df_q3d, crime==1 & white==1)$response)-mean(subset(df_q3d, crime==0 & white==1)$response) - (mean(subset(df_q3d, crime==1 & white==0)$response)-mean(subset(df_q3d, crime==0 & white==0)$response))
+
+result3d <- cbind(data.frame(q3.model$coefficients),c(lambda_0,lambda_1,lambda_2,lambda_3))
+colnames(result3d) <- c("Model coeff","Remainig sample means")
+result3d
+```
+
+And also:
+
+E(Callback | White = 0, Crime = 1) = $\lambda_{0} + \lambda_{2}$ = 0.0841751
+
+E(Callback | White = 1, Crime = 0) = $\lambda_{0} + \lambda_{1}$ = 0.1383333
+
+E(Callback | White = 1, Crime = 1) = $\lambda_{0} + \lambda_{2}$ = 0.0876897
+
+```{r}
+lambda_0lambda_2 <- mean(subset(df_q3d, white==0 & crime==1)$response)
+lambda_0lambda_1 <- mean(subset(df_q3d, white==1 & crime==0)$response)
+lambdas <- mean(subset(df_q3d, white==1 & crime==1)$response) 
+
+result3d <- data.frame(OLSlambdas=c(lambda_0+lambda_2, lambda_0+lambda_1,lambda_0+lambda_1+lambda_2+lambda_3), ConditionalMeansLambdas = c(lambda_0lambda_2, lambda_0lambda_1, lambdas))
+rownames(result3d) = c("Black with criminal record", "White without criminal record", "White  with criminal record")
+
+result3d
+```
+
+(e)
+
+By the law of LIE we know: E(White) = E(White | Crime) = P(Crime = 1) * E(White | Crime = 1) + P(Crime = 0) * (White | Crime = 0)
+We know from the last part that the corresponding labdas are $\lambda_{0} + \lambda_{1} + \lambda_{2} + \lambda_{3}$ for crime == 1 and $\lamda_{0} + \lambda_{1}$ for crime == 0.
+Now we'll calculate:
+```{r}
+prob_1 <- mean(df_q3d$crime)
+(lambdas)*prob_1 + (lambda_0+lambda_1)*(1-prob_1)
+```
+
+
+(f)
+To conclude this part, we have found that the effect of being white on the callback rate in the post period after having no box is much higher than the effect of being white when there is a box. That means that it's a much worse discrimination when there is no box at all than when there is a box on the form.
+
+Furthermore we can see from the results that when there is a box on the form your chances of getting called back are only slightly different if you are white or if you are black and you both have a criminal record. Whereas if you are white or weather you are black and you don't have criminal records then being white significantly improves the chances of getting a callback but still far less than when there is no box at all. So according to the results we got from the data there is a discrimination anyway but when removing the box it gets worse for black people to get a job.
+
+The white coef $\alpha_{1}$ from part 2 (without a box) > $\alpha_{1}$ from section e (with box). Therefore when the box was removed the positive impact for white callback was greater than when there was no box.
+
+Question 4.
+We'll use the model:
+$Callback_{i} = \beta_{0} + \beta_{1}White_{i} + \beta_{2}Box_{i}$
+
+(a) We'll now interpret each beta coefficient:
+```{r}
+df_q4 <- subset(df, pre==1)
+q4.model <- lm(data=df_q4, response ~ white + remover + (white:remover) +(crime:remover)+(white:crime:remover))
+
+summary(q4.model)
+```
+
+$\beta_{0}$ = E(Callback | White = 0, Box = 0, Crime = 0) = 0.0961538
+  Showing the error and the complement of the binary variable - black, no criminal, no box.
+
+$\beta_{1}$ = E(Callback | White = 1, Box = 0, Crime = 0) - E(Callback | White = 0, Box = 0, Crime = 0) = 0.0268539
+  Showing the impact of white on the callback rate.
+
+$\beta_{2}$ = E(Callback | White = 0, Box = 1, Crime = 0) - E(Callback | White = 0, Box = 0, Crime = 0) = 0.0308303
+  Showing impact of the box on the callback rate.
+
+$\beta_{3}$ = E(Callback | White = 1, Box = 1, Crime = 0) - $\sum_{i = 0}^{2} \beta_{i}$ = -0.042809
+
+$\beta_{4}$ = E(Callback | White = 0, Box = 1, Crime = 1) - $\beta_{0} - \beta_{2} - \beta_{3}$ = -0.0078346
+  Showing impact of the interaction between crime and the box.
+
+$\beta_{5}$ = E(Callback | White = 1, Box = 1, Crime = 1) - $\sum_{i = 0}^{6} \beta_{i}$ = -0.0078346
+  Showind the impact of interaction of all variables - White, Box and Crime.
+  
+
+Question 5.
+
+```{r}
+q5.model <- coeftest(q4.model, df = Inf, vcov = vcovHC)
+betas_5 <- coef(q5.model)
+```
+
+(a)
+
+We'll estimate E(Y | White=1, Box=0, Crime=1) − E(Y | White=0, Box=0, Crime=1) = $\beta_{0} + \beta_{1} - \beta_{0} = \beta_{1}$
+```{r}
+q5.model
+```
+
+i.    The estimate of $\beta_{1}$ is 0.0268539.
+
+ii.   The std is 0.0089281.
+
+iii.    
+```{r}
+statTest <- q5.model[2,c(1,2,3)][1]/q5.model[2,c(1,2,3)][2]
+statTest > qt(0.95, dim(df)[1]-1)
+```
+
+As received we will reject the null hypothesis at a significance level of 0.05.
+
+iv.
+
+```{r}
+coefci(q4.model, df = dim(df)[1]-1, level=.95, vcov = vcovHC)[2,]
+```
+
+v.
+
+With a 95% confidence level we found that the estimator of the callback rate in the pre-period for the employers who don't have a box during the pre period will be somewhere between 0.009 and 0.04. Because the Ci does not contain zero in it we would reject the hypothesis that the effect of being white when there is no box in the pre period is 0 (and we have already strengthened that fact also in other parts). To sum up we can say that being white definitely has a positive effect on the chance of getting a call back.
+
+(b)
+
+We'll estimate E(Y | White=1, Box=1, Crime=0)
+```{r}
+df_q5 <- subset(df, pre==1 &crime==0 &remover==1)
+q5.model <- lm(data=df_q5, response ~ white)
+
+q5.model.robust <- coeftest(q5.model, df = Inf, vcov = vcovHC)
+betas_5 <- coef(q5.model.robust)
+q5.model.robust[,c(1,2,3,4)]
+```
+
+We got that the estimate is 0.0113492
+
+As we can see the std is 0.0198881
+
+```{r}
+test_stat <- q5.model.robust[2,c(1,2,3,4)][3]
+as.numeric(test_stat) > qt(0.95, dim(df_q5)[1]-1)
+```
+
+```{r}
+coefci(q5.model, df = dim(df)[1]-1, level=.95, vcov = vcovHC)[2,]
+```
+
+Therefore we won't reject the null hypothesis.
+
+(c)
+Now we'll do the same but this time for E(Y | White = 1, Box = 1, Crime = 1)
+```{r}
+df_q5 <- subset(df, pre==1 &crime==1 &remover==1)
+
+lm5 <- lm(data=df_q4, response ~ white)
+
+lm5.robust <- coeftest(lm5, df = Inf, vcov = vcovHC)
+betas_5 <- coef(lm5.robust)
+lm5.robust[,c(1,2,3,4)]
+```
+
+```{r}
+test_stat <- lm5.robust[2,c(1,2,3,4)][3]
+test_stat > qt(0.95, dim(df)[1]-1)
+```
+
+```{r}
+coefci(lm5, df = dim(df_q5)[1]-1, level=.95, vcov = vcovHC)[2,]
+```
+
+Therefore we won't reject the nul hypothesis, even though we can observe that the CI here is a little bit smaller than what we saw in part b.
+
+
+(d)
+Recall our model from part 4:
+E[Y | White = 1, Crime = 1, Box = 1] - E[Y | White = 0, Crime = 1, Box = 1] - (E[Y | White = 1, Crime = 0, Box = 1] - E[Y | White = 0, Crime = 0, Box = 0]) = $\beta_{5}$
+
+Testing our null hypotheses that $\beta_{5}$ = 0 which means that for the employers that had the box the effect of being white vs black was the same for applicants with and without a criminal record.
+
+```{r}
+q4.model.robust <- coeftest(q4.model, df = Inf, vcov = vcovHC)
+q4.model.robust[,c(1,2,3,4)]
+```
+
+```{r}
+test_stat <- q4.model.robust[6,c(1,2,3,4)][3]
+test_stat > qt(0.95, dim(df)[1]-1)
+```
+
+```{r}
+coefci(q4.model, df = dim(df_q5)[1]-1, level=.95, vcov = vcovHC)[6,]
+```
+
+Therefore we won't reject the null hypothesis because 0 is inside the CI and the T test is smaller than the qt.
+
+
+(e)
+
+Also here we can use our model from part 4: $E[Y | White = 1, Box = 0] - E[Y | White = 1, Crime = 0, Box = 1] = \beta_{3} + \beta_{2}$ because:
+$(\beta_{0} + \beta_{1}) - (\beta_{0} + \beta_{1} + \beta_{2} + \beta_{3}) = -(\beta_{2} + \beta_{3})$
+
+Therefore we get that our null hypothesis is that $\beta_{2} + \beta_{3}$ = 0 . This means that for the employers who have no box is the same as the effect of being white for applicants witout any criminal record apllying to employers with a box.
+
+```{r}
+x <- q4.model$coefficients[3]+q4.model$coefficients[4]
+se <- summary(q4.model)$coefficients[3,2]+summary(q4.model)$coefficients[4,2]
+
+L <- x - se*qt(0.95, dim(df)[1]-1)
+U <- x + se*qt(0.95, dim(df)[1]-1)
+print(c(L, U))
+```
+
+As we can see O is inside the CI and therefore we won't reject the null hypothesis with a 5% significanc level.
+
+(f)
+
+As we saw in class, when refering to a joint null hypothesis we can use the Wal chi-squared method in order to test our joint null hypothesis. we would like to test the joint null of having no effect of being white on callbacks for the employers without a box. That means that the joint null hypothesis of d+e:
+{$\beta_{5}$} $\cap$ {$\beta_{2} + \beta_{3} = 0$}
+
+```{r}
+linearHypothesis(q4.model,c("white:remover:crime=0","remover + white:remover=0"), test = "Chisq",
+vcov=vcovHC,df = Inf)
+```
+
+As we can see we got a rather high p.value of 0.6037 so we won't reject the null hypothesis.
+
+6.
+
+(a)
+$Callback_{i} = \beta_{0} + \beta_{1}White_{i} + \beta_{2}Box_{i} + \beta_{3}(White_{i} X Box_{i}) + \beta_{4} (Crime_{i} X Box_{i}) + \beta_{5} (White_{i} X Crime_{i} X Box_{i}) + \beta_{6}GED_{i} + \beta_{7}EmploymentGap + \epsilon_{i}$ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

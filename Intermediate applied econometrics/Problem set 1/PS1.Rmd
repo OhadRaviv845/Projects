@@ -1,0 +1,211 @@
+---
+title: "PS1 Ohad"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(magrittr)
+library(haven)
+library(Hmisc)
+library(tidyverse)
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+library(stargazer)
+library(plyr)
+library(ri)
+library(scales)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+setwd("/Users/ohad/Documents/לימודים/applied econometrics/PS1")
+```
+
+# part 1: setup and descriptive statistics
+```{r}
+#1
+load_df <- readRDS("earlytrainingproject_clean.rds") #reading that dataset into load_df
+#2
+#creating the different vars:
+varsChild <- c("iq5", "iq6", "iq12", "retn12", "iep12")
+varsTeen <- c("iq15", "hsgrad", "parent")
+varsAdult <- c("college", "employed", "convicted", "felon", "jailed", "marijuana")
+#3
+vars <- c(varsChild, varsTeen, varsAdult)
+
+new_df <- load_df[c("SUBJECT", "DC_TRT", "SEX", vars)]
+#4
+print(describe(new_df))
+```
+```{r}
+#5
+#using sapply to check how many NA values are in the data
+missing_count <-sapply(new_df, function(y) sum(length(which(is.na(y)))))
+noNA_df <- na.omit(new_df) #removing all the NA values from the data
+missing_count2 <-sapply(noNA_df, function(y) sum(length(which(is.na(y)))))
+print(paste("Omitted observations: ", sum(missing_count)-sum(missing_count2))) #computing how many values were removed using na.omit
+
+#6
+#The variable sex takes two values - "F", "M"
+
+#7
+#Just like in lab2, using ifelse to map the variables of data into a new binary variable which only takes 0,1
+noNA_df$treat <- ifelse(noNA_df$DC_TRT=="Control", 0, 1)
+noNA_df$fem <- ifelse(noNA_df$SEX=="F", 1, 0)
+
+#8
+#using stargazer to create a descriptive statistics table, each time using only one index out of the treat column
+stargazer(subset(noNA_df,treat==0)[vars],type="text",title="Descriptive Statistics for the Control group", digits=2,covariate.labels=vars)
+
+stargazer(subset(noNA_df,treat==1)[vars],type="text",title="Descriptive Statistics for the Treated group", digits=2,covariate.labels=vars)
+```
+```{r}
+#part 2
+#1
+#using sapply to compute the mean of each variable in vars for the control and the treatment observations seperately
+treated_mean = sapply(subset(noNA_df, noNA_df$treat==1)[c(vars)], mean)
+not_treated_mean = sapply(subset(noNA_df, noNA_df$treat==0)[c(vars)], mean)
+
+means_table = data.frame(treated_mean, not_treated_mean, effect=treated_mean-not_treated_mean) #effect - calculate the diff between the two
+
+stargazer(means_table, type="text",title="Estimated average treatment effects", digits=2,summary = FALSE, covariate.labels = c("Var","Treated Mean", "Not treated Mean", "Avrage treatment effect"))
+
+```
+```{r}
+#2
+#first we'll create the table of means for the male
+Male_treated_mean = sapply(subset(noNA_df, noNA_df$treat==1 & noNA_df$fem==0)[c(vars)], mean)
+Male_not_treated_mean = sapply(subset(noNA_df, noNA_df$treat==0 & noNA_df$fem==0)[c(vars)], mean)
+
+Male_means_table = data.frame(Male_treated_mean, Male_not_treated_mean, effect=Male_treated_mean-Male_not_treated_mean)
+
+stargzer_male <-  stargazer(Male_means_table, type="text",title="Estimated average treatment effects for male", digits=2,summary = FALSE, covariate.labels = c("Var","Treated mean", "Not treated mean", "Avrage treatment effect"))
+
+#second we"ll create the table of means for the female
+Female_mean_treated = sapply(subset(noNA_df, noNA_df$treat==1 & noNA_df$fem==1)[c(vars)], mean)
+Female_not_treated = sapply(subset(noNA_df, noNA_df$treat==0 & noNA_df$fem==1)[c(vars)], mean)
+
+Female_means_table = data.frame(Female_mean_treated, Female_not_treated, effect=Female_mean_treated-Female_not_treated)
+
+stargazer_female <- stargazer(Female_means_table, type="text",title="Estimated average treatment effects for female", digits=2,summary = FALSE, covariate.labels = c("Var","Mean treated", "Mean not treated", "Avrage treatment effect"))
+```
+```{r}
+#part 3
+#1
+#set a seed
+set.seed(100)
+
+permutations <- genperms(noNA_df$treat)
+
+probs <- genprobexact(noNA_df$treat, clustvar = noNA_df$SUBJECT)
+
+unique(probs)
+dim(permutations)
+```
+```{r}
+#2
+EstFunc <- function(noNA_df, perms, prob, vars) {
+  #creating average treatment effects through the function
+  Ates <- function(vec) {
+    PotentialOutcome <- genouts(vec, noNA_df$treat)
+    ATES <- gendist(PotentialOutcome, perms, pr=unique(prob))
+    return(ATES)
+  }
+  #now apple to all the vars using sapply
+  ans <- sapply(noNA_df[c(vars)], Ates)
+  return(ans)
+}
+
+#3
+PvalueTable <- function(noNA_df, perm, probs, means_table, vars) {
+  
+
+  #creating a matrix of estimates
+  estimate <- abs(EstFunc(noNA_df,perm,probs,vars))
+  
+  #computing the mean difference between treat and control
+  actual_diff <- abs(t(means_table["effect"]))
+  
+  #next we'll check how many values are higher than than the result we got for the real difference
+  raw_data <- c()
+  for (col in colnames(actual_diff)) {
+    counter <- sum(estimate[,c(col)] >= actual_diff[,c(col)])/10000
+    raw_data <- c(raw_data, counter)
+  }
+  p_value_data <- data.frame(parameter = colnames(actual_diff), p_val =raw_data)
+  #set the p_value in order
+  p_value_data <- p_value_data[order(p_value_data$p_val),]
+  #total p_value received
+  p_value_data <- rbind(p_value_data, c("Total", round(mean(p_value_data$p_val), 4)))
+  #computing by precentage
+  p_value_data$p_val <- percent(as.numeric(p_value_data$p_val))
+  return(p_value_data)
+}
+
+P_val_Total <- PvalueTable(noNA_df, permutations, probs, means_table, vars)
+stargazer(t(P_val_Total),type="text",flip=T,title="P-Values for all 14 variables")
+```
+We got that in total 37% of the treatment effects in the distribution that we created were at least as significant.
+
+Therfore we cannot reject the null hypothesis with a good confidence.
+
+However if we look at the parameters we di see that IQ and college params are less than 5-10% so we can infer that the treatment did make a change. Thanks to the treatment children will go more to school and have a better IQ. 
+```{r}
+```{r, echo=FALSE}
+stargazer(means_table,type="text",title="Estimated average treatment effects", digits=2,summary = FALSE, covariate.labels = c("Var","Mean treated", "Mean not treated", "Avrage treatment effect"), out.header=TRUE)
+```
+
+About the params that got 100% we know that in our table with the difference in means from section 2, we saw these params (convicted, felon, jailed, marijuana etc), had a minimal difference between the treated and not treated.
+
+So we can infer that the treatment is indeed effective but not in all the params tested.
+
+```{r}
+#Same as above only automated
+PermProbs <- function(table) {
+  permutations <- genperms(table$treat)
+  probs <- genprobexact(table$treat, clustvar = table$SUBJECT)
+  return(list(permutations, probs))
+}
+
+dfMale <- subset(noNA_df, noNA_df$fem==0)
+dfFemale <- subset(noNA_df, noNA_df$fem==1)
+
+M_perms_probs <- PermProbs(dfMale)
+F_perms_probs <- PermProbs(dfFemale)
+
+P_val_Males <- PvalueTable(dfMale, M_perms_probs[[1]], M_perms_probs[[2]], Male_means_table, vars)
+P_val_Females <- PvalueTable(dfFemale, F_perms_probs[[1]], F_perms_probs[[2]], Female_means_table, vars)
+
+stargazer(t(P_val_Males),type="text",flip=T,title="P-Values for all 14 variables-Only Males")
+
+stargazer(t(P_val_Females),type="text",flip=T,title="P-Values for all 14 variables-Only Females")
+```
+
+We'll now compare the differences between boys and girls:
+
+We can see that the IQ at younger ages improved more for boys than for girls. on the other hand, the IQ at older ages improved more for girls than for boys.
+
+we can see that the employment is impacted more for boys than for the girls.
+
+it seems the treatment works better for boys in the parameters of "crime" than for girls (which could be because girls were initially less involved in crime).
+
+To concolude there is a slight difference between the sexes in effects of the treatment.
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

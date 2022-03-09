@@ -1,0 +1,20 @@
+Ohad Raviv
+204590780
+
+=====================================
+=  README for ex6: oop polinomial   =
+=====================================
+
+
+==================
+=  Description:  =
+==================
+
+in the first part there is the constructor of the class, the setting of all the operators that are to be used later.
+in the second part, using the operators of the class, computing different mathematical operations, using euclid's and
+newton rahpson's algorithms.
+
+======================
+=  Special Comments  =
+======================
+1. further documentation is on each function.

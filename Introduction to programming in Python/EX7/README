@@ -1,0 +1,21 @@
+Ohad Raviv
+204590780
+
+====================================================================
+=  README for ex7: iterators/generators, second order programing   =
+====================================================================
+
+
+==================
+=  Description:  =
+==================
+
+first part is working with iterators and generators, working to compute different mathematics and to iterate through
+lists.
+second part is working with second order programing, defining functions that create new functions to create mathemtical
+computations and the last one is used for binary search to compute the zero of a function within a certain interval.
+
+======================
+=  Special Comments  =
+======================
+1. further documentation is on each function.

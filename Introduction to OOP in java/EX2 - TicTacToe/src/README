@@ -1,0 +1,13 @@
+ohadrav
+204590780
+
+Strategies for the clever player and for the snartypamts player - snartypamts is defined to look through the board
+for the best streak it can extend or block. The clever player is designed to iterate thorugh the board starting at the
+top left corner, moving right through the columns and going down a line when reaching the end. It will put it's mark in
+the first free spot it will find. We can see in the results below, that cleverplayer is better then the random
+version of mr. whatever, but mr. snartypamts is by far better than clever player.
+
+a 500 games tournament between whatever and clever - 25,   475,   0
+a 500 games tournament between whatever and snartypamts - 51,   449,   0
+a 500 games tournament between snartypamts and clever - 500,   0,   0
+a 10000 games tournament between two random players - 4963,    5037,    0

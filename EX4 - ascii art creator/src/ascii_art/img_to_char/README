@@ -1,0 +1,26 @@
+ohad_rav
+204590780
+
+=============================
+=      File description     =
+=============================
+BrightnessImgCharMatcher.java - converts image to an ascii art.
+Driver.java - a class which holds the main of the program.
+CharRenderer.java - a class provided through supplied materials.
+
+=============================
+=          Design           =
+=============================
+The program uses different calculations and normalizations in order to take a given picture and turn it into ascii art.
+chooseChars() is the method which is called upon first, I chose to design it using the setupChars to create the array
+and then call upon convrtImageToAscii() which does calculations in itself and also calls for further methods.
+
+=============================
+=  Implementation details   =
+=============================
+As required, the implementation took place only on the file BrightnessImageCharMatcher.java
+Further documentation is inside the code.
+
+=============================
+=    Answers to questions   =
+=============================

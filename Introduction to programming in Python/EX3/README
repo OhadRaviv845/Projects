@@ -1,0 +1,22 @@
+Name: Ohad Raviv
+ID: 204590780
+
+==================================
+=  README for ex3: play dobble   =
+==================================
+
+==================
+=  Description:  =
+==================
+
+1. a function to check which symbols are on both cards out of given cards.
+2. a function to remove a card out of a deck using the pop function of python.
+3. a function to add a new card to an existing deck, checking if it has the same length of cards
+and only one symbol in common with each other card in the deck.
+4. a function to check weather all cards in the deck has the same length and only one intersction symbol with
+each other.
+5. a function to draw 2 random cards.
+6. a function to count all symbols and adding them into a dictionary, in order to later print them out.
+7. the play dobble function, using all of the prior functions. the play itself is divided into an assisting function,
+going through the process of the game. another assisting function is used to turn the random cards from list to strings.
+8. two functions, one generates all combinations and the other one generates decks with max cards possible.

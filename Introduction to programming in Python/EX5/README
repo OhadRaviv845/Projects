@@ -1,0 +1,28 @@
+Ohad Raviv
+204590780
+
+=============================
+=  README for ex5: ngrams   =
+=============================
+
+
+==================
+=  Description:  =
+==================
+1. the function loops through a text and sets keys and values according to the frequency of sets in the length of n.
+2. the function recieves a dictionary and loops through it's items, adding all the keys and values to one string.
+it then returns a string of the dictionary.
+3. the function sets an empty dictionary and then splits the given string, setting keys and adding values to the dictionary.
+4. the function recieves a dictionary and a filename to save, it writes the dicitonary as a text file.
+5. the function recieves a text file and converts it into a frequency dictionary of the combinations in the text.
+6. the function receives a text file, a variable for the length of combinations, and a dict filename to save onto,
+it creates a frequency dictionary and saves it into the new file.
+7. the function compares two dictionaries and return the square difference between them.
+8. the function receives a dictionary and checks the frequency of a smaller combination length inside this dictionary.
+9. the function receives a text file and a list of dicts, it then returns the index of the dict file that is the closest
+to the text.
+
+======================
+=  Special Comments  =
+======================
+1. further documentation is on each function.
