@@ -1,0 +1,1 @@
+CMakeLists.txt not found in /Users/ohad/Documents/לימודים/CC/EX1 Select CMakeLists.txt

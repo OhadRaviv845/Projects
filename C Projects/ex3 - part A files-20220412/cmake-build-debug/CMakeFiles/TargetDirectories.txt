@@ -1,0 +1,3 @@
+/Users/ohad/Documents/לימודים/CC/ex3 - part A files-20220412/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/ohad/Documents/לימודים/CC/ex3 - part A files-20220412/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/ohad/Documents/לימודים/CC/ex3 - part A files-20220412/cmake-build-debug/CMakeFiles/ex3___part_A_files_20220412.dir
